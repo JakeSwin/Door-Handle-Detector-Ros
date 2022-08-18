@@ -1,0 +1,1 @@
+door_handle_detector_msgs/BoundingBox[] bounding_boxes
