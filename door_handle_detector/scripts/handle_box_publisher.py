@@ -3,6 +3,7 @@ import rospy
 
 from sensor_msgs.msg import Image
 from door_handle_detector_msgs.msg import BoundingBoxList, BoundingBox
+from door_handle_detector_msgs.srv import BoundingBoxService, BoundingBoxServiceResponse
 
 from cv_bridge import CvBridge, CvBridgeError
 
@@ -13,20 +14,16 @@ headers = {'content-type': content_type}
 
 import requests
 import os
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
-
-script_dir = os.path.dirname(os.path.realpath(__file__))
-rel_path = 'camera_image.jpg' 
-abs_file_path = script_dir + "/" + rel_path 
 
 class door_handle_detector:
     def __init__(self):
+        self.image_topic = "/xtion/rgb/image_rect_color"
         self.image_pub = rospy.Publisher("handle_bounding_boxes", BoundingBoxList, queue_size=3)
         self.bridge = CvBridge()
-        self.image_sub = rospy.Subscriber("/xtion/rgb/image_rect_color", Image, self.callback, queue_size=1, buff_size=2058)
+        self.service = rospy.Service('get_bounding_box', BoundingBoxService, self.callback)
 
     def callback(self, data):
+        data = rospy.wait_for_message(self.image_topic, Image)
         try:
             cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
         except CvBridgeError as e:
@@ -43,13 +40,16 @@ class door_handle_detector:
         print(res.json()["preds"])
 
         bboxes = res.json()["preds"]["bboxes"]
+        scores = res.json()["preds"]["scores"]
+
         bbox_msg_list = list()
-        for bbox in bboxes:
-            bbox_msg_list.append(BoundingBox(int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3]), 0.111))
+        for i, bbox in enumerate(bboxes):
+            bbox_msg_list.append(BoundingBox(int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3]), float(scores[i])))
         try:
             self.image_pub.publish(BoundingBoxList(bbox_msg_list))
         except CvBridgeError as e:
             print(e)
+        return BoundingBoxServiceResponse(BoundingBoxList(bbox_msg_list))
 
 def main():
     dhd = door_handle_detector()
@@ -59,12 +59,6 @@ def main():
         rospy.spin()
     except:
         print("Shutting down")
-
-    #rospy.Subscriber(image_topic, Image, image_callback)
-#    while not rospy.is_shutdown():
-#        msg = rospy.wait_for_message(image_topic, Image)
-#        image_callback(msg)
-#        rospy.sleep(3)
 
 if __name__ == '__main__':
     main()

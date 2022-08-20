@@ -9,6 +9,9 @@ project(door_handle_detector)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
 	rospy
+	image_geometry
+	ros_numpy
+	tf
 	sensor_msgs
 	door_handle_detector_msgs)
 
@@ -105,7 +108,7 @@ find_package(OpenCV REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES door_handle_detector
-CATKIN_DEPENDS sensor_msgs door_handle_detector_msgs
+CATKIN_DEPENDS sensor_msgs door_handle_detector_msgs image_geometry ros_numpy tf
 #  DEPENDS system_lib
 )
 
@@ -164,6 +167,7 @@ ${catkin_INCLUDE_DIRS}
 catkin_install_python(PROGRAMS
   scripts/image_saver.py
   scripts/handle_box_publisher.py
+  scripts/door_handle_finder.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
