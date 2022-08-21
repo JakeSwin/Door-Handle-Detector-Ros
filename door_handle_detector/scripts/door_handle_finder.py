@@ -5,6 +5,7 @@ import ros_numpy
 import rospy
 import tf
 
+import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import Image, PointCloud2, CameraInfo
 from door_handle_detector_msgs.msg import BoundingBoxList, BoundingBox
 from door_handle_detector_msgs.srv import BoundingBoxService, BoundingBoxServiceRequest, BoundingBoxServiceResponse 
@@ -18,6 +19,22 @@ headers = {'content-type': content_type}
 
 import requests
 import os
+
+def pixelTo3DPoint(point_cloud, u, v):
+    width = point_cloud.width
+    height= point_cloud.height
+
+    arrayPosition = v*point_cloud.row_step + u*point_cloud.point_step
+
+    arrayPosX = arrayPosition + point_cloud.fields[0].offset
+    arrayPosY = arrayPosition + point_cloud.fields[1].offset
+    arrayPosZ = arrayPosition + point_cloud.fields[2].offset
+
+    X = point_cloud.data[arrayPosX]
+    Y = point_cloud.data[arrayPosY]
+    Z = point_cloud.data[arrayPosZ]
+
+    return X, Y, Z
 
 def main():
     print("Starting node")
@@ -66,15 +83,28 @@ def main():
         cam_model = image_geometry.PinholeCameraModel()
         cam_model.fromCameraInfo(info)
         ray = numpy.array(cam_model.projectPixelTo3dRay((x_center, y_center)))
-        point3d = ray * cv_image[x_center][y_center]
+        point3d = ray * cv_image[x_center][y_center] 
 
+        pointX, pointY, pointZ = pixelTo3DPoint(point_cloud, x_center, y_center)
+        print("Point3d: ")
         print(point3d)
         
-        br.sendTransform((point3d[2], point3d[0], point3d[1]),
+        print("PixelTo3DPoint Value:")
+        print(pointX)
+        print(pointY)
+        print(pointZ)
+        
+        gen = pc2.read_points(point_cloud, uvs=[(x_center, y_center)])
+        print(gen)
+        for p in gen:
+            print("x : %f y: %f z : %f" %(p[0], p[1], p[2]))
+        print(point_cloud.header.stamp)
+        print(point_cloud.header.frame_id)
+        br.sendTransform((p[0], p[1], p[2]),
                         (0.0, 0.0, 0.0, 1.0),
-                        rospy.Time.now(),
+                        point_cloud.header.stamp,
                         "handle",
-                        "xtion_depth_frame")
+                        cam_model.tfFrame())
         rate.sleep()
 
     print("Shutting down")
