@@ -5,6 +5,8 @@ import ros_numpy
 import rospy
 import tf
 
+from tf.transformations import quaternion_from_euler
+
 import sensor_msgs.point_cloud2 as pc2
 from sensor_msgs.msg import Image, PointCloud2, CameraInfo
 from door_handle_detector_msgs.msg import BoundingBoxList, BoundingBox
@@ -75,8 +77,12 @@ def main():
         print(point_cloud.header.stamp)
         print(point_cloud.header.frame_id)
 
+        # quaternion = (0.0, 0.0, 0.0, 1.0)
+        # quaternion = quaternion_from_euler(-1.5707, 0, 1.5707)
+        quaternion = quaternion_from_euler(1.5707, -1.5707, 1.5707)
+
         br.sendTransform((p[0], p[1], p[2]),
-                        (0.0, 0.0, 0.0, 1.0),
+                        quaternion,
                         point_cloud.header.stamp,
                         "handle",
                         cam_model.tfFrame())
