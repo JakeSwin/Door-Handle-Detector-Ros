@@ -59,8 +59,15 @@ def main():
         cam_model = image_geometry.PinholeCameraModel()
         cam_model.fromCameraInfo(info)
 
-        x_center = bbox.x_max - ((bbox.x_max - bbox.x_min) / 2)
-        y_center = bbox.y_max - ((bbox.y_max - bbox.y_min) / 2)
+        box_width = (bbox.x_max - bbox.x_min)
+        box_height = (bbox.y_max - bbox.y_min)
+        x_center = bbox.x_max - (box_width / 2)
+        y_center = bbox.y_max - (box_height / 2)
+
+        if x_center > (point_cloud.width / 2):
+            x_center -= (box_width / 4)
+        else:
+            x_center += (box_width / 4)
 
         if x_center > point_cloud.width or y_center > point_cloud.height or x_center < 0 or y_center < 0:
             continue 
