@@ -1,0 +1,5 @@
+uint32 goal_id
+---
+bool completed
+---
+bool still_moving

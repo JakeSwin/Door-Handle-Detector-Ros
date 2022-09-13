@@ -4,6 +4,9 @@ import copy
 import sys
 import tf
 import moveit_commander
+import actionlib
+
+import door_handle_detector_msgs.msg as a_msgs
 
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
 
@@ -13,10 +16,12 @@ from moveit_msgs.msg import DisplayTrajectory
 END_EFFECTOR_LINK = "gripper_grasping_frame"
 
 class tiago_door_opener:
-    def __init__(self, end_effector_link="gripper_grasping_frame"):
+    def __init__(self, name, end_effector_link="gripper_grasping_frame"):
         self.listener = tf.TransformListener()
         self.robot = moveit_commander.RobotCommander()
         self.scene = moveit_commander.PlanningSceneInterface()
+
+        self.action_name = name
 
         self.move_group = moveit_commander.MoveGroupCommander("arm_torso")
         self.move_group.set_end_effector_link(end_effector_link)
@@ -24,6 +29,8 @@ class tiago_door_opener:
 
         self.display_trajectory_publisher = rospy.Publisher("/display_planned_path", DisplayTrajectory, queue_size=20)
         self.move_base_publisher = rospy.Publisher("/mobile_base_controller/cmd_vel", Twist, queue_size=10)
+        self.action_server = actionlib.SimpleActionServer(self.action_name, a_msgs.OpenDoorAction, execute_cb=self.execute_cb, auto_start=False)
+        self.action_server.start()
 
         self.trans = [0, 0, 0]
         self.rot = [0, 0, 0, 0]
@@ -70,14 +77,15 @@ class tiago_door_opener:
 
         return pose
     
-    def ready_handle_position(self, pose=self.get_handle_pose()):
-
+    def ready_handle_position(self):
+        
+        pose = self.get_handle_pose()
         # define position 1 - hand moves to infront of handle
         pose.position.x = self.trans[0] - 0.3 
         
         return pose
     
-    def above_handle_position(self, pose=self.get_handle_pose()):
+    def above_handle_position(self, pose):
 
         (rot_x, rot_y, rot_z) = euler_from_quaternion(self.rot)
 
@@ -94,7 +102,7 @@ class tiago_door_opener:
         
         return pose
         
-    def down_handle_position(self, pose=self.get_handle_pose()):
+    def down_handle_position(self, pose):
 
         pose.position.x = self.trans[0] - 0.06
         pose.position.z = self.trans[2] - 0.12
@@ -107,13 +115,26 @@ class tiago_door_opener:
         ready_handle_position = self.ready_handle_position()
         waypoints.append(copy.deepcopy(ready_handle_position))
         
-        above_handle_position = self.above_handle_position()
+        above_handle_position = self.above_handle_position(self.get_handle_pose())
         waypoints.append(copy.deepcopy(above_handle_position))
         
-        down_handle_position = self.down_handle_positon(above_handle_position)
+        down_handle_position = self.down_handle_position(above_handle_position)
         waypoints.append(copy.deepcopy(down_handle_position))
         
         return waypoints
+
+    def move_base(self, x, z, r, d):
+        t = Twist()
+        r = rospy.Rate(r)
+        count = 0
+
+        t.linear.x = x 
+        t.angular.z = z 
+
+        while count < d:
+            self.move_base_publisher.publish(t)
+            count += 1
+            r.sleep()
     
     def compute_waypoint_path(self, waypoints):
         print("planning")
@@ -122,7 +143,7 @@ class tiago_door_opener:
         print("fraction: %s" % fraction)
         return plan, fraction
         
-    def publsh_trajectory(self, plan):
+    def publish_trajectory(self, plan):
         # publish found trajectory
         display_trajectory = DisplayTrajectory()
         display_trajectory.trajectory_start = self.robot.get_current_state()
@@ -139,23 +160,38 @@ class tiago_door_opener:
         else:
             print("Fraction was not 1.0, not executing path")
 
+    def execute_cb(self, goal):
+        waypoints = self.grab_handle_waypoints()
+        
+        (plan, fraction) = self.compute_waypoint_path(waypoints)
+        
+        self.publish_trajectory(plan)
+        
+        self.execute_plan(plan, fraction)
+
+        if fraction == 1.0:
+            self.move_base(0.5, 0, 30, 10)
+
+            waypoints = [self.ready_handle_position()]
+
+            (plan, fraction) = self.compute_waypoint_path(waypoints)
+            
+            self.publish_trajectory(plan)
+            
+            self.execute_plan(plan, fraction)
+
+            self.move_base(0.5, 0.05, 30, 20)
+
+            self.action_server.set_succeeded(a_msgs.OpenDoorResult(True))
+
+
 def main():
     moveit_commander.roscpp_initialize(sys.argv)
     rospy.init_node("open_door_node", anonymous=True)
     
-    robot_controller = tiago_door_opener()
-    
+    robot_controller = tiago_door_opener(rospy.get_name())
     robot_controller.display_startup_info()
-    
     robot_controller.update_handle_frame()
-    
-    waypoints = robot_controller.grab_handle_waypoints()
-    
-    (path, fraction) = robot_controller.compute_waypoint_path(waypoints)
-    
-    robot_controller.publish_trajectory(plan)
-    
-    robot_controller.execute_plan(plan, fraction)
 
 # def main():
     # moveit_commander.roscpp_initialize(sys.argv)
