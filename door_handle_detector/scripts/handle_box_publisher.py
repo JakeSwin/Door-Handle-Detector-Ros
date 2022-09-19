@@ -33,7 +33,7 @@ class door_handle_detector:
         encoded_image = encoded_image.tostring()
         
         files={'file': ('image.jpg', encoded_image, content_type)}
-        res = requests.post('http://192.168.1.230:8000/upload', files=files)
+        res = requests.post('http://localhost:8000/upload', files=files)
 
         print("Status Code: " + str(res.status_code))
         print("Server Message: " + res.json()["message"])

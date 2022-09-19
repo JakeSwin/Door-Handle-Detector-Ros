@@ -6,7 +6,7 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 
 def main():
     rospy.init_node("arm_door_ready_client")
-    client = actionlib.SimpleActionClient("arm_controller/follow_joint_trajectory", FollowJointTrajectoryAction)
+    client = actionlib.SimpleActionClient("safe_arm_controller/follow_joint_trajectory", FollowJointTrajectoryAction)
     client.wait_for_server()
 
     goal = FollowJointTrajectoryGoal()
