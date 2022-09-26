@@ -1,4 +1,4 @@
 <launch>
-  <node name="box_publisher" pkg="door_handle_detector" type="handle_box_publisher.py" />
-  <node name="handle_finder" pkg="door_handle_detector" type="door_handle_finder.py" />
+  <node name="box_publisher" pkg="door_handle_detector" output="screen" type="handle_box_publisher.py" />
+  <node name="handle_finder" pkg="door_handle_detector" output="screen" type="door_handle_finder.py" />
 </launch>

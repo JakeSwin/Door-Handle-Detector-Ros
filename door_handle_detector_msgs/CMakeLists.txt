@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   # message_runtime
   std_msgs
+  geometry_msgs
   actionlib_msgs
 )
 
@@ -58,6 +59,7 @@ add_message_files(
 add_service_files(
   FILES
   BoundingBoxService.srv
+  HandlePoseService.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -72,6 +74,7 @@ generate_messages(
   DEPENDENCIES
   std_msgs
   actionlib_msgs
+  geometry_msgs
 )
 
 ################################################
@@ -106,7 +109,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES door_handle_detector_msgs
-CATKIN_DEPENDS message_runtime std_msgs actionlib_msgs
+CATKIN_DEPENDS message_runtime geometry_msgs std_msgs actionlib_msgs
 #  DEPENDS system_lib
 )
 

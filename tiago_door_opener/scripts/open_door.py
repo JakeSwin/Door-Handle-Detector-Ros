@@ -7,6 +7,7 @@ import moveit_commander
 import actionlib
 
 import door_handle_detector_msgs.msg as a_msgs
+from door_handle_detector_msgs.srv import HandlePoseService, HandlePoseServiceRequest, HandlePoseServiceResponse
 
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
 
@@ -29,11 +30,24 @@ class tiago_door_opener:
 
         self.display_trajectory_publisher = rospy.Publisher("/display_planned_path", DisplayTrajectory, queue_size=20)
         self.move_base_publisher = rospy.Publisher("/mobile_base_controller/cmd_vel", Twist, queue_size=10)
+
+        rospy.wait_for_service("get_handle_pose")
+        self.handle_pose_proxy = rospy.ServiceProxy("get_handle_pose", HandlePoseService)
+        #rospy.Subscriber("/handle_pose", PoseStamped, self.handle_pose_handler)
         #self.action_server = actionlib.SimpleActionServer(self.action_name, a_msgs.OpenDoorAction, execute_cb=self.execute_cb, auto_start=False)
         #self.action_server.start()
 
         self.trans = [0, 0, 0]
         self.rot = [0, 0, 0, 0]
+
+    def handle_pose_handler(self, pose_stamped):
+        pose_to_base = self.listener.transformPose("/base_footprint", pose_stamped)
+
+        trans = pose_to_base.pose.position
+        rot = pose_to_base.pose.orientation
+
+        self.trans = [trans.x, trans.y, trans.z]
+        self.rot = [rot.x, rot.y, rot.z, rot.w]
         
     def display_startup_info(self, print_robot_state=False):
         planning_frame = self.move_group.get_planning_frame()
@@ -80,6 +94,7 @@ class tiago_door_opener:
     def ready_handle_position(self):
         
         pose = self.get_handle_pose()
+        print(pose)
         # define position 1 - hand moves to infront of handle
         pose.position.x = self.trans[0] - 0.3 
         pose.position.z = self.trans[2] + 0.05
@@ -193,16 +208,30 @@ def main():
     
     robot_controller = tiago_door_opener(rospy.get_name())
     robot_controller.display_startup_info()
-    robot_controller.update_handle_frame()
+    # robot_controller.update_handle_frame()
+    # pose_stamped = rospy.wait_for_message("/handle_pose", PoseStamped)
+    pose_stamped = robot_controller.handle_pose_proxy(HandlePoseServiceRequest())
+    pose_stamped = pose_stamped.handle_pose
+    print(pose_stamped)
+    robot_controller.handle_pose_handler(pose_stamped)
     waypoints = robot_controller.grab_handle_waypoints()
     
     (plan, fraction) = robot_controller.compute_waypoint_path(waypoints)
-    
+
     robot_controller.publish_trajectory(plan)
     
-    robot_controller.execute_plan(plan, fraction)
-
     if fraction == 1.0:
+        print("Plan found, 1 for full motion execution, 2 to move to next step, 3 to cancel")
+        inp = 0 
+        while inp not in (1, 2, 3): 
+            inp = input("> ")
+        if inp == 3:
+            return
+        
+        robot_controller.execute_plan(plan, fraction)
+
+        if inp == 2: raw_input("Enter to next step")
+
         robot_controller.move_base(0.1, 0, 30, 130)
 
         waypoints = [robot_controller.above_handle_position()]
@@ -211,9 +240,17 @@ def main():
         
         robot_controller.publish_trajectory(plan)
         
+        if inp == 2: raw_input("Enter to next step")
+
         robot_controller.execute_plan(plan, fraction)
 
+        if inp == 2: raw_input("Enter to next step")
+
         robot_controller.move_base(0.1, 0, 30, 180)
+
+        if inp == 2: raw_input("Enter to next step")
+
+        robot_controller.move_base(-0.1, 0, 30, 100)
 
 
 # def main():

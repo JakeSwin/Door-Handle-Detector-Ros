@@ -10,6 +10,7 @@ project(tiago_door_opener)
 find_package(catkin REQUIRED COMPONENTS
   actionlib
   control_msgs
+  geometry_msgs
   door_handle_detector
   door_handle_detector_msgs
   moveit_commander
@@ -111,7 +112,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES tiago_door_opener
-  CATKIN_DEPENDS actionlib control_msgs door_handle_detector moveit_commander moveit_msgs rospy tf trajectory_msgs door_handle_detector_msgs 
+  CATKIN_DEPENDS actionlib geometry_msgs control_msgs door_handle_detector moveit_commander moveit_msgs rospy tf trajectory_msgs door_handle_detector_msgs 
 #  DEPENDS system_lib
 )
 

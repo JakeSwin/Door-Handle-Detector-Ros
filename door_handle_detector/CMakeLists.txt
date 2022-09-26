@@ -13,6 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
 	ros_numpy
 	tf
 	sensor_msgs
+	std_msgs
+	geometry_msgs
 	door_handle_detector_msgs)
 
 find_package(OpenCV REQUIRED)
@@ -108,7 +110,7 @@ find_package(OpenCV REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES door_handle_detector
-CATKIN_DEPENDS sensor_msgs door_handle_detector_msgs image_geometry ros_numpy tf
+CATKIN_DEPENDS geometry_msgs std_msgs sensor_msgs door_handle_detector_msgs image_geometry ros_numpy tf
 #  DEPENDS system_lib
 )
 
