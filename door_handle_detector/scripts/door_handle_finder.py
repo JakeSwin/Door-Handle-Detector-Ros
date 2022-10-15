@@ -70,9 +70,9 @@ class handle_finder:
             y_center = bbox.y_max - (box_height / 2)
 
             if x_center > (point_cloud.width / 2):
-                x_center -= (box_width / 5)
+                x_center -= (box_width / 4)
             else:
-                x_center += (box_width / 5)
+                x_center += (box_width / 4)
 
             if x_center > point_cloud.width or y_center > point_cloud.height or x_center < 0 or y_center < 0:
                 continue 
